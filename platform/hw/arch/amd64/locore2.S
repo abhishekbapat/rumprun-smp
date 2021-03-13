@@ -34,7 +34,7 @@ address_tag_start:
     .long   _ebss ;bss_end_addr
 address_tag_end:
 entry_address_tag_start:
-    .short MULTIBOOT_HEADER_TAG_ENTRY_ADDRESS_EFI64
+    .short MULTIBOOT_HEADER_TAG_ENTRY_ADDRESS
     .short MULTIBOOT_HEADER_TAG_OPTIONAL
     .long entry_address_tag_end - entry_address_tag_start
     .long _start ;entry_addr
