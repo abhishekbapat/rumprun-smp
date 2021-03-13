@@ -35,7 +35,7 @@ parsemem(struct multiboot_tag_mmap *tag)
     }
 
     if (mmap_found == 0)
-        bmk_platform_halt("multiboot memory chunk not found");
+        bmk_platform_halt("multiboot2 memory chunk not found");
 
     osend = bmk_round_page((unsigned long)_end);
     bmk_assert(osend > mmap->addr && osend < mmap->addr + mmap->len);
@@ -102,9 +102,14 @@ void multiboot(unsigned long addr)
         case MULTIBOOT_TAG_TYPE_MMAP:
             if (memory_parse_count == 0)
             {
-                memory_info_count++;
                 if (parsemem((struct multiboot_tag_mmap *)tag) == 0)
                     memory_parse_count++;
+            }
+            break;
+        case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
+            if (memory_info_count == 0)
+            {
+                memory_info_count++;
             }
             break;
         default:
@@ -115,7 +120,7 @@ void multiboot(unsigned long addr)
     if (cmdline == NULL)
         multiboot_cmdline[0] = 0;
 
-    if (memory_info_count == 0)
+    if (memory_info_count == 0 && memory_parse_count == 0)
         bmk_platform_halt("multiboot memory info not available\n");
 
     if (memory_parse_count == 0)

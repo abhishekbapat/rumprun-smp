@@ -368,7 +368,7 @@ static volatile int main_cpu_ready = 0;
 struct bmk_cpu_info x86_cpu_info[BMK_MAXCPUS];
 
 void
-x86_boot(struct multiboot_info *mbi, unsigned long cpu)
+x86_boot(unsigned long mbi, unsigned long cpu)
 {
 	/* Other CPUs jumping from the trampoline. */
 	if (cpu) {
