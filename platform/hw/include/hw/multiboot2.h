@@ -93,7 +93,7 @@
 #define MULTIBOOT_CONSOLE_FLAGS_CONSOLE_REQUIRED 1
 #define MULTIBOOT_CONSOLE_FLAGS_EGA_TEXT_SUPPORTED 2
 
-#ifndef ASM_FILE
+#ifndef _LOCORE
 
 typedef unsigned char multiboot_uint8_t;
 typedef unsigned short multiboot_uint16_t;
@@ -418,6 +418,6 @@ struct multiboot_tag_load_base_addr
     multiboot_uint32_t load_base_addr;
 };
 
-#endif /*  ! ASM_FILE */
+#endif /*  ! _LOCORE */
 
 #endif /*  ! MULTIBOOT_HEADER */

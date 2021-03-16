@@ -81,7 +81,7 @@ void multiboot(unsigned long addr)
                                       "increase BMK_MULTIBOOT_CMDLINE_SIZE");
 
                 bmk_printf("multiboot: Using configuration from %s\n",
-                           mtm->cmdline ? mtm->cmdline : "(unnamed module)");
+                           mbm_name ? mbm_name : "(unnamed module)");
                 bmk_memcpy(multiboot_cmdline, cmdline, cmdlinelen);
                 multiboot_cmdline[cmdlinelen] = 0;
             }
