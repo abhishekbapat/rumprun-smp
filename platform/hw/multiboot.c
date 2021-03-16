@@ -36,92 +36,118 @@
 
 #define MEMSTART 0x100000
 
-static int
-parsemem(uint32_t addr, uint32_t len)
+static uint32_t
+parsemem(struct multiboot_tag_mmap *tag)
 {
-	struct multiboot_mmap_entry *mbm;
-	unsigned long osend;
-	extern char _end[];
-	uint32_t off;
+    uint32_t mmap_found = 0;
+    multiboot_memory_map_t *mmap;
+    unsigned long osend;
+    extern char _end[];
 
-	/*
-	 * Look for our memory.  We assume it's just in one chunk
-	 * starting at MEMSTART.
-	 */
-	for (off = 0; off < len; off += mbm->size + sizeof(mbm->size)) {
-		mbm = (void *)(uintptr_t)(addr + off);
-		if (mbm->addr == MEMSTART
-		    && mbm->type == MULTIBOOT_MEMORY_AVAILABLE) {
-			break;
-		}
-	}
-	if (!(off < len))
-		bmk_platform_halt("multiboot memory chunk not found");
+    /*
+     * Look for our memory.  We assume it's just in one chunk
+     * starting at MEMSTART.
+     */
+    for (mmap = tag->entries;
+         (multiboot_uint8_t *)mmap < (multiboot_uint8_t *)tag + tag->size;
+         mmap = (multiboot_memory_map_t *)((unsigned long)mmap + ((struct multiboot_tag_mmap *)tag)->entry_size))
+    {
+        if (mmap->addr == MEMSTART && mmap->type == MULTIBOOT_MEMORY_AVAILABLE)
+        {
+            mmap_found++;
+            break;
+        }
+    }
 
-	osend = bmk_round_page((unsigned long)_end);
-	bmk_assert(osend > mbm->addr && osend < mbm->addr + mbm->len);
+    if (mmap_found == 0)
+        bmk_platform_halt("multiboot2 memory chunk not found");
 
-	bmk_pgalloc_loadmem(osend, mbm->addr + mbm->len);
+    osend = bmk_round_page((unsigned long)_end);
+    bmk_assert(osend > mmap->addr && osend < mmap->addr + mmap->len);
 
-	bmk_memsize = mbm->addr + mbm->len - osend;
+    bmk_pgalloc_loadmem(osend, mmap->addr + mmap->len);
 
-	return 0;
+    bmk_memsize = mmap->addr + mmap->len - osend;
+
+    return 0;
 }
 
 char multiboot_cmdline[BMK_MULTIBOOT_CMDLINE_SIZE];
 
-void
-multiboot(struct multiboot_info *mbi)
+void multiboot(unsigned long addr)
 {
-	unsigned long cmdlinelen;
-	char *cmdline = NULL,
-	     *mbm_name;
-	struct multiboot_mod_list *mbm;
+    uint32_t module_count = 0;
+    uint32_t cmdline_count = 0;
+    uint32_t memory_info_count = 0;
+    uint32_t memory_parse_count = 0;
+    struct multiboot_tag *tag;
+    unsigned long cmdlinelen;
+    char *cmdline = NULL,
+         *mbm_name;
+    //unsigned total_size;
+    bmk_core_init(BMK_THREAD_STACK_PAGE_ORDER);
+    //total_size = *(unsigned *)addr;
+    for (tag = (struct multiboot_tag *)(addr + 8);
+         tag->type != MULTIBOOT_TAG_TYPE_END;
+         tag = (struct multiboot_tag *)((multiboot_uint8_t *)tag + ((tag->size + 7) & ~7)))
+    {
+        switch (tag->type)
+        {
+        case MULTIBOOT_TAG_TYPE_MODULE:
+            if (module_count == 0)
+            {
+                struct multiboot_tag_module *mtm = (struct multiboot_tag_module *)tag;
+                module_count++;
+                mbm_name = (char *)mtm->cmdline;
+                cmdline = (char *)(uintptr_t)mtm->mod_start;
+                cmdlinelen = mtm->mod_end - mtm->mod_start;
+                if (cmdlinelen >= (BMK_MULTIBOOT_CMDLINE_SIZE - 1))
+                    bmk_platform_halt("command line too long, "
+                                      "increase BMK_MULTIBOOT_CMDLINE_SIZE");
 
-	bmk_core_init(BMK_THREAD_STACK_PAGE_ORDER);
+                bmk_printf("multiboot: Using configuration from %s\n",
+                           mbm_name ? mbm_name : "(unnamed module)");
+                bmk_memcpy(multiboot_cmdline, cmdline, cmdlinelen);
+                multiboot_cmdline[cmdlinelen] = 0;
+            }
+            break;
+        case MULTIBOOT_TAG_TYPE_CMDLINE:
+            if (cmdline_count == 0 && module_count == 0)
+            {
+                cmdline_count++;
+                struct multiboot_tag_string *mts = (struct multiboot_tag_string *)tag;
+                cmdline = (char *)mts->string;
+                cmdlinelen = bmk_strlen(cmdline);
+                if (cmdlinelen >= BMK_MULTIBOOT_CMDLINE_SIZE)
+                    bmk_platform_halt("command line too long, "
+                                      "increase BMK_MULTIBOOT_CMDLINE_SIZE");
+                bmk_strcpy(multiboot_cmdline, cmdline);
+            }
+            break;
+        case MULTIBOOT_TAG_TYPE_MMAP:
+            if (memory_parse_count == 0)
+            {
+                if (parsemem((struct multiboot_tag_mmap *)tag) == 0)
+                    memory_parse_count++;
+            }
+            break;
+        case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
+            if (memory_info_count == 0)
+            {
+                memory_info_count++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
 
-	/*
-	 * First (and for now, only) multiboot module loaded is used as a
-	 * preferred source for configuration (currently overloaded to
-	 * `cmdline').
-	 * TODO: Split concept of `cmdline' and `config'.
-	 */
-	if (mbi->flags & MULTIBOOT_INFO_MODS &&
-			mbi->mods_count >= 1 &&
-			mbi->mods_addr != 0) {
-		mbm = (struct multiboot_mod_list *)(uintptr_t)mbi->mods_addr;
-		mbm_name = (char *)(uintptr_t)mbm[0].cmdline;
-		cmdline = (char *)(uintptr_t)mbm[0].mod_start;
-		cmdlinelen =
-			mbm[0].mod_end - mbm[0].mod_start;
-		if (cmdlinelen >= (BMK_MULTIBOOT_CMDLINE_SIZE - 1))
-			bmk_platform_halt("command line too long, "
-			    "increase BMK_MULTIBOOT_CMDLINE_SIZE");
+    if (cmdline == NULL)
+        multiboot_cmdline[0] = 0;
 
-		bmk_printf("multiboot: Using configuration from %s\n",
-			mbm_name ? mbm_name : "(unnamed module)");
-		bmk_memcpy(multiboot_cmdline, cmdline, cmdlinelen);
-		multiboot_cmdline[cmdlinelen] = 0;
-	}
+    if (memory_info_count == 0 && memory_parse_count == 0)
+        bmk_platform_halt("multiboot memory info not available\n");
 
-	/* If not using multiboot module for config, save the command line
-	 * before something overwrites it */
-	if (cmdline == NULL && mbi->flags & MULTIBOOT_INFO_CMDLINE) {
-		cmdline = (char *)(uintptr_t)mbi->cmdline;
-		cmdlinelen = bmk_strlen(cmdline);
-		if (cmdlinelen >= BMK_MULTIBOOT_CMDLINE_SIZE)
-			bmk_platform_halt("command line too long, "
-			    "increase BMK_MULTIBOOT_CMDLINE_SIZE");
-		bmk_strcpy(multiboot_cmdline, cmdline);
-	}
-
-	/* No configuration/cmdline found */
-	if (cmdline == NULL)
-		multiboot_cmdline[0] = 0;
-
-	if ((mbi->flags & MULTIBOOT_INFO_MEMORY) == 0)
-		bmk_platform_halt("multiboot memory info not available\n");
-
-	if (parsemem(mbi->mmap_addr, mbi->mmap_length) != 0)
-		bmk_platform_halt("multiboot memory parse failed");
+    if (memory_parse_count == 0)
+        bmk_platform_halt("multiboot memory parse failed");
 }

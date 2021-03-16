@@ -2,8 +2,8 @@
 #define _RUMPRUN_X86_VAR_H 1
 
 #ifndef _LOCORE
-struct multiboot_info;
-void	x86_boot(struct multiboot_info *, unsigned long);
+//struct multiboot_info;
+void	x86_boot(unsigned long, unsigned long);
 
 void	x86_initpic(void);
 void	x86_initidt(void);

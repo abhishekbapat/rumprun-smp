@@ -27,26 +27,54 @@
 #include <hw/kernel.h>
 #include <hw/multiboot.h>
 
-#define MYMULTIBOOT_FLAGS \
-    (MULTIBOOT_PAGE_ALIGN | MULTIBOOT_MEMORY_INFO | MULTIBOOT_AOUT_KLUDGE)
-
 .section .bootstrap, "ax"
 
 .code32
 
-.align 4
+.align 8
 .global _minios_hypercall_page, _kvm_pvclock_wc
 _minios_hypercall_page:
 _kvm_pvclock_wc:
 bootstrap:
+multiboot_header:
 .long MULTIBOOT_HEADER_MAGIC
-.long MYMULTIBOOT_FLAGS
-.long -(MULTIBOOT_HEADER_MAGIC+MYMULTIBOOT_FLAGS)
-.long bootstrap
-.long 0x100000
-.long _edata
-.long _ebss
-.long _start
+.long MULTIBOOT_ARCHITECTURE_I386
+.long multiboot_header_end - multiboot_header
+.long -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_ARCHITECTURE_I386 + (multiboot_header_end - multiboot_header))
+mbi_request_start:
+    .short MULTIBOOT_HEADER_TAG_INFORMATION_REQUEST
+    .short MULTIBOOT_HEADER_TAG_IMPORTANT
+    .long mbi_request_end - mbi_request_start
+	.long MULTIBOOT_TAG_TYPE_CMDLINE
+	.long MULTIBOOT_TAG_TYPE_MODULE
+    .long MULTIBOOT_TAG_TYPE_BASIC_MEMINFO
+	.long MULTIBOOT_TAG_TYPE_MMAP
+mbi_request_end:
+address_tag_start:      
+    .short MULTIBOOT_HEADER_TAG_ADDRESS
+    .short MULTIBOOT_HEADER_TAG_OPTIONAL
+    .long address_tag_end - address_tag_start
+    .long   multiboot_header /* header_addr */
+    .long   0x100000 /* load_addr */
+    .long   _edata /* load_end_addr */
+    .long   _ebss /* bss_end_addr */
+address_tag_end:
+entry_address_tag_start:
+    .short MULTIBOOT_HEADER_TAG_ENTRY_ADDRESS
+    .short MULTIBOOT_HEADER_TAG_OPTIONAL
+    .long entry_address_tag_end - entry_address_tag_start
+    .long _start /* entry_addr */
+entry_address_tag_end:
+module_alignment_tag_start:
+    .short MULTIBOOT_HEADER_TAG_MODULE_ALIGN
+    .short MULTIBOOT_HEADER_TAG_OPTIONAL
+    .long module_alignment_tag_end - module_alignment_tag_start
+module_alignment_tag_end:
+framebuffer_tag_end:
+    .short MULTIBOOT_HEADER_TAG_END
+    .short 0
+    .long 8
+multiboot_header_end:
 
 /* Reserve space for the hypercall page. */
 .org bootstrap + 0x1000

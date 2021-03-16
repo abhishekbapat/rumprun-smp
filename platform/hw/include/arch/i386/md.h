@@ -20,8 +20,8 @@ void cpu_lgdt(struct region_descriptor *);
 
 #include <arch/x86/inline.h>
 
-struct multiboot_info;
-void cpu_boot(struct multiboot_info *);
+//struct multiboot_info;
+void cpu_boot(unsigned long);
 #endif /* !_LOCORE */
 
 #endif /* _BMK..._H_ */

@@ -4,8 +4,8 @@
 
 #include <hw/types.h>
 
-struct multiboot_info;
-void multiboot(struct multiboot_info *);
+//struct multiboot_info;
+void multiboot(unsigned long);
 
 void cons_init(void);
 void cons_putc(int);
