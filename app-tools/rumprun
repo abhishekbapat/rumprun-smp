@@ -780,9 +780,9 @@ bake_iso ()
 
 	# create the iso directory structure
 	mkdir -p "${ISODIR}/boot/grub"
-	printf 'set timeout=0\n' > "${ISODIR}/boot/grub/grub.cfg"
+	printf 'set timeout=10\n' > "${ISODIR}/boot/grub/grub.cfg"
 	printf 'menuentry "rumpkernel" {\n' >> "${ISODIR}/boot/grub/grub.cfg"
-	printf '\tmultiboot /boot/%s\n\tmodule /json.cfg cmdline\n}\n' \
+	printf '\tmultiboot2 /boot/%s\n\tmodule2 /json.cfg cmdline\n}\n' \
 	    $(basename $1) >> "${ISODIR}/boot/grub/grub.cfg"
 	cp ${bootimage} "${ISODIR}/boot"
 	cp "${TMPDIR}/json.cfg" "${ISODIR}"
