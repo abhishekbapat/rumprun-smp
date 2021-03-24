@@ -41,6 +41,7 @@ multiboot_header:
 .long MULTIBOOT_ARCHITECTURE_I386
 .long multiboot_header_end - multiboot_header
 .long -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_ARCHITECTURE_I386 + (multiboot_header_end - multiboot_header))
+.align 8
 mbi_request_start:
     .short MULTIBOOT_HEADER_TAG_INFORMATION_REQUEST
     .short MULTIBOOT_HEADER_TAG_IMPORTANT
@@ -50,6 +51,7 @@ mbi_request_start:
     .long MULTIBOOT_TAG_TYPE_BASIC_MEMINFO
 	.long MULTIBOOT_TAG_TYPE_MMAP
 mbi_request_end:
+.align 8
 address_tag_start:      
     .short MULTIBOOT_HEADER_TAG_ADDRESS
     .short MULTIBOOT_HEADER_TAG_OPTIONAL
@@ -59,17 +61,20 @@ address_tag_start:
     .long   _edata /* load_end_addr */
     .long   _ebss /* bss_end_addr */
 address_tag_end:
+.align 8
 entry_address_tag_start:
     .short MULTIBOOT_HEADER_TAG_ENTRY_ADDRESS
     .short MULTIBOOT_HEADER_TAG_OPTIONAL
     .long entry_address_tag_end - entry_address_tag_start
     .long _start /* entry_addr */
 entry_address_tag_end:
+.align 8
 module_alignment_tag_start:
     .short MULTIBOOT_HEADER_TAG_MODULE_ALIGN
     .short MULTIBOOT_HEADER_TAG_OPTIONAL
     .long module_alignment_tag_end - module_alignment_tag_start
 module_alignment_tag_end:
+.align 8
 framebuffer_tag_end:
     .short MULTIBOOT_HEADER_TAG_END
     .short 0
