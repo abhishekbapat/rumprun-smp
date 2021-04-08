@@ -55,6 +55,7 @@ parsemem(struct multiboot_tag_mmap *tag)
         if (mmap->addr == MEMSTART && mmap->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
             mmap_found++;
+            bmk_printf("multiboot2 memory chunk found\n");
             break;
         }
     }
@@ -69,6 +70,7 @@ parsemem(struct multiboot_tag_mmap *tag)
 
     bmk_memsize = mmap->addr + mmap->len - osend;
 
+    //bmk_platform_halt("test 5");
     return 0;
 }
 
@@ -105,8 +107,9 @@ void multiboot(unsigned long addr)
                     bmk_platform_halt("command line too long, "
                                       "increase BMK_MULTIBOOT_CMDLINE_SIZE");
 
-                bmk_printf("multiboot: Using configuration from %s\n",
+                bmk_printf("multiboot2: Using configuration from %s\n",
                            mbm_name ? mbm_name : "(unnamed module)");
+                //bmk_platform_halt("test 1");
                 bmk_memcpy(multiboot_cmdline, cmdline, cmdlinelen);
                 multiboot_cmdline[cmdlinelen] = 0;
             }
@@ -121,12 +124,14 @@ void multiboot(unsigned long addr)
                 if (cmdlinelen >= BMK_MULTIBOOT_CMDLINE_SIZE)
                     bmk_platform_halt("command line too long, "
                                       "increase BMK_MULTIBOOT_CMDLINE_SIZE");
+                //bmk_platform_halt("test 2");
                 bmk_strcpy(multiboot_cmdline, cmdline);
             }
             break;
         case MULTIBOOT_TAG_TYPE_MMAP:
             if (memory_parse_count == 0)
             {
+                //bmk_platform_halt("test 3");
                 if (parsemem((struct multiboot_tag_mmap *)tag) == 0)
                     memory_parse_count++;
             }
@@ -135,6 +140,7 @@ void multiboot(unsigned long addr)
             if (memory_info_count == 0)
             {
                 memory_info_count++;
+                //bmk_platform_halt("test 4");
             }
             break;
         default:

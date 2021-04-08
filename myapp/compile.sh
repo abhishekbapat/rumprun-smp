@@ -11,3 +11,4 @@ x86_64-rumprun-netbsd-cookfs -s 1 rootfs.fs rootfs
 
 rumprun-bake -m "add rootfs.fs" hw_generic myapp.bin myapp
 
+sudo ./build_iso.sh
