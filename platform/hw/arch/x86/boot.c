@@ -403,21 +403,29 @@ x86_boot(unsigned long mbi, unsigned long cpu)
 	cons_init(mbi);
 	
 	bmk_printf("rump kernel bare metal bootstrap\n\n");
-	//bmk_platform_halt("test\n");
 
 	x86_xen_init_early();
 	cpu_init();
 
-	multiboot(mbi);
+	int uefi = multiboot(mbi);
 
-	x86_mp_init();
+	if (uefi == 0)
+	{
+		bmk_printf("mp_init_begin\n");
+		x86_mp_init();
+		bmk_printf("mp_init\n");
+	}
 
 	bmk_sched_init();
+	bmk_printf("sched_init\n");
 	x86_xen_init();
+	bmk_printf("xen_init\n");
 
 	intr_init();
+	bmk_printf("intr_init\n");
 
 	spl0();
+	bmk_printf("spl0\n");
 
 	bmk_sched_startmain(bmk_mainthread, multiboot_cmdline);
 }

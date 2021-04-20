@@ -37,9 +37,6 @@ static volatile uint32_t cons_width;
 #define FONT_WIDTH 8
 #define FONT_HEIGHT 16
 
-#define HELLO_STATEMENT \
-	"Framebuffer Console (ECE 6504)\nCopyright (C) 2021 Ruslan Nikolaev\n\n"
-
 static unsigned int *Fb;
 static unsigned int PosX, PosY, MaxX, MaxY;
 
@@ -263,7 +260,6 @@ vgacons_putc(int c)
 static void fb_init(unsigned int *fb, unsigned int width, unsigned int height)
 {
 	uint64_t i, num = (uint64_t) width * height;
-	const char *__hello_statement = HELLO_STATEMENT;
 
 	/* Clean up the screen */
 	for (i = 0; i < num; i++) {
@@ -275,11 +271,6 @@ static void fb_init(unsigned int *fb, unsigned int width, unsigned int height)
 	PosY = 0;
 	MaxX = width / FONT_WIDTH;
 	MaxY = height / FONT_HEIGHT;
-
-	/* Print a hello statement */
-	for (i = 0; i < sizeof(HELLO_STATEMENT)-1; i++) {
-		fb_putc(__hello_statement[i]);
-	}
 }
 
 void vgacons_init(unsigned int *fb_addr, unsigned int fb_height, unsigned int fb_width)

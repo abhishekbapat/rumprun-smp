@@ -36,6 +36,35 @@
 
 #define MEMSTART 0x100000
 
+struct efi_memory_descriptor
+{
+    uint32_t type;
+    uintptr_t physical_addr;
+    uintptr_t virt_addr;
+    uint64_t num_pages;
+    uint64_t attribute;
+};
+
+const char* efi_memory_type[] = 
+{
+    "EfiReservedMemoryType",
+    "EfiLoaderCode",
+    "EfiLoaderData",
+    "EfiBootServicesCode",
+    "EfiBootServicesData",
+    "EfiRuntimeServicesCode",
+    "EfiRuntimeServicesData",
+    "EfiConventionalMemory",
+    "EfiUnusableMemory",
+    "EfiACPIReclaimMemory",
+    "EfiACPIMemoryNVS",
+    "EfiMemoryMappedIO",
+    "EfiMemoryMappedIOPortSpace",
+    "EfiPalCode",
+    "EfiPersistentMemory",
+    "EfiMaxMemoryType"
+};
+
 static uint32_t
 parsemem(struct multiboot_tag_mmap *tag)
 {
@@ -55,7 +84,7 @@ parsemem(struct multiboot_tag_mmap *tag)
         if (mmap->addr == MEMSTART && mmap->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
             mmap_found++;
-            bmk_printf("multiboot2 memory chunk found\n");
+            bmk_printf("multiboot2 memory chunk found at location: %p\n", (void *)mmap->addr);
             break;
         }
     }
@@ -70,14 +99,14 @@ parsemem(struct multiboot_tag_mmap *tag)
 
     bmk_memsize = mmap->addr + mmap->len - osend;
 
-    //bmk_platform_halt("test 5");
     return 0;
 }
 
 char multiboot_cmdline[BMK_MULTIBOOT_CMDLINE_SIZE];
 
-void multiboot(unsigned long addr)
+int multiboot(unsigned long addr)
 {
+    int uefi = 0;
     uint32_t module_count = 0;
     uint32_t cmdline_count = 0;
     uint32_t memory_info_count = 0;
@@ -143,6 +172,34 @@ void multiboot(unsigned long addr)
                 // bmk_platform_halt("test 4");
             }
             break;
+        case MULTIBOOT_TAG_TYPE_EFI_MMAP:
+        {
+            struct multiboot_tag_efi_mmap *mmap = (struct multiboot_tag_efi_mmap *)tag;
+            int mmap_entries = mmap->size/mmap->descr_size;
+            bmk_printf("Entries: %d\n", mmap_entries);
+            for(int i = 0; i < mmap_entries; i++)
+            {
+                struct efi_memory_descriptor *mdesc = (struct efi_memory_descriptor *)((uint64_t)mmap->efi_mmap + (mmap->descr_size * i));
+                int size = mdesc->num_pages * 4;
+                if(mdesc->type == 7)
+                    bmk_printf("%s : %d KBs at address: %p\n", efi_memory_type[mdesc->type], size, (void *)mdesc->physical_addr);
+            }
+            break;
+        }
+        case MULTIBOOT_TAG_TYPE_BOOT_LOADER_NAME:
+        {
+            struct multiboot_tag_string *mts = (struct multiboot_tag_string *)tag;
+            bmk_printf("Bootloader name: %s", mts->string);
+            break;
+        }
+        case MULTIBOOT_TAG_TYPE_FRAMEBUFFER:
+        {
+            struct multiboot_tag_framebuffer *tagfb = (struct multiboot_tag_framebuffer *)tag;
+            unsigned int *fb_addr = (unsigned int *)tagfb->common.framebuffer_addr;
+            if (((uint64_t)(fb_addr)) != 0xb8000) // Means UEFI
+                uefi = 1;
+            break;
+        }
         default:
             break;
         }
@@ -156,4 +213,5 @@ void multiboot(unsigned long addr)
 
     if (memory_parse_count == 0)
         bmk_platform_halt("multiboot memory parse failed");
+    return uefi;
 }
