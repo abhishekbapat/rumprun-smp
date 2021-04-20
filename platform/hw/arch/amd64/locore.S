@@ -75,7 +75,6 @@ module_alignment_tag_start:
     .long module_alignment_tag_end - module_alignment_tag_start
 module_alignment_tag_end:
 .align 8
-framebuffer_tag_end:
     .short MULTIBOOT_HEADER_TAG_END
     .short 0
     .long 8

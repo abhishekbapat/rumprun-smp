@@ -7,7 +7,7 @@
 //struct multiboot_info;
 void multiboot(unsigned long);
 
-void cons_init(void);
+void cons_init(unsigned long);
 void cons_putc(int);
 void cons_puts(const char *);
 

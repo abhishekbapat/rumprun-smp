@@ -25,6 +25,7 @@
 
 #include <hw/types.h>
 #include <hw/kernel.h>
+#include <hw/multiboot.h>
 
 #include <arch/x86/cons.h>
 #include <arch/x86/hypervisor.h>
@@ -39,8 +40,39 @@ static void (*vcons_putc)(int) = vgacons_putc;
 uint16_t bios_com1_base, bios_crtc_base;
 
 void
-cons_init(void)
+cons_init(unsigned long mbi)
 {
+	int uefi = 0;
+	struct multiboot_tag *tag;
+	unsigned int *fb_addr;
+	unsigned int fb_width;
+	unsigned int fb_height;
+	struct multiboot_tag_framebuffer *tagfb;
+	for (tag = (struct multiboot_tag *)(mbi + 8);
+         tag->type != MULTIBOOT_TAG_TYPE_END;
+         tag = (struct multiboot_tag *)((multiboot_uint8_t *)tag + ((tag->size + 7) & ~7)))
+	{
+		switch (tag->type)
+		{
+			case MULTIBOOT_TAG_TYPE_FRAMEBUFFER:
+				tagfb = (struct multiboot_tag_framebuffer *) tag;
+				fb_addr = (unsigned int *)tagfb->common.framebuffer_addr;
+				fb_width = (unsigned int)tagfb->common.framebuffer_width;
+				fb_height = (unsigned int)tagfb->common.framebuffer_height;
+			break;
+			default:
+			break;
+		}
+	}
+
+	vgacons_init(fb_addr, fb_height, fb_width);
+
+	if(((uint64_t)(fb_addr)) != 0xb8000) // Means UEFI
+	{
+		uefi = 1;
+		vcons_putc = fb_putc;
+	}
+
 	int prefer_serial = 0;
 	int hypervisor;
 
@@ -59,7 +91,7 @@ cons_init(void)
 	if (bios_crtc_base == 0)
 		prefer_serial = 1;
 
-	if (prefer_serial && bios_com1_base != 0) {
+	if (prefer_serial && bios_com1_base != 0 && uefi == 0) {
 		cons_puts("Using serial console.");
 		serialcons_init(bios_com1_base, 115200);
 		vcons_putc = serialcons_putc;

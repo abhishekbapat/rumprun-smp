@@ -140,7 +140,7 @@ void multiboot(unsigned long addr)
             if (memory_info_count == 0)
             {
                 memory_info_count++;
-                //bmk_platform_halt("test 4");
+                // bmk_platform_halt("test 4");
             }
             break;
         default:

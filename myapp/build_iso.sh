@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export PATH="${PATH}:$(pwd)/../rumprun/bin"
+export PATH="${PATH}:$(pwd)/../rumprun-uefi_support/bin"
 
 rm rumprun-myapp.bin.iso
 

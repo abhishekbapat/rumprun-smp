@@ -400,8 +400,10 @@ x86_boot(unsigned long mbi, unsigned long cpu)
 	x86_cpu_info[0].spldepth = 1;
 	bmk_set_cpu_info(&x86_cpu_info[0]);
 
-	cons_init();
+	cons_init(mbi);
+	
 	bmk_printf("rump kernel bare metal bootstrap\n\n");
+	//bmk_platform_halt("test\n");
 
 	x86_xen_init_early();
 	cpu_init();

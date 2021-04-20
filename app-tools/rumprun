@@ -781,6 +781,16 @@ bake_iso ()
 	# create the iso directory structure
 	mkdir -p "${ISODIR}/boot/grub"
 	printf 'set timeout=10\n' > "${ISODIR}/boot/grub/grub.cfg"
+	printf 'insmod efi_gop\n' >> "${ISODIR}/boot/grub/grub.cfg"
+	printf 'insmod efi_uga\n' >> "${ISODIR}/boot/grub/grub.cfg"
+	printf 'insmod font\n' >> "${ISODIR}/boot/grub/grub.cfg"
+	printf 'if loadfont /boot/grub/fonts/unicode.pf2\n' >> "${ISODIR}/boot/grub/grub.cfg"
+	printf 'then\n' >> "${ISODIR}/boot/grub/grub.cfg"
+	printf '\tinsmod gfxterm\n' >> "${ISODIR}/boot/grub/grub.cfg"
+	printf '\tset gfxmode=auto\n' >> "${ISODIR}/boot/grub/grub.cfg"
+	printf '\tset gfxpayload=keep\n' >> "${ISODIR}/boot/grub/grub.cfg"
+	printf '\tterminal_output gfxterm\n' >> "${ISODIR}/boot/grub/grub.cfg"
+	printf 'fi\n' >> "${ISODIR}/boot/grub/grub.cfg"
 	printf 'menuentry "rumpkernel" {\n' >> "${ISODIR}/boot/grub/grub.cfg"
 	printf '\tmultiboot2 /boot/%s\n\tmodule2 /json.cfg cmdline\n}\n' \
 	    $(basename $1) >> "${ISODIR}/boot/grub/grub.cfg"
