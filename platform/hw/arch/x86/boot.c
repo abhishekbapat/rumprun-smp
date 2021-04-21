@@ -410,22 +410,14 @@ x86_boot(unsigned long mbi, unsigned long cpu)
 	int uefi = multiboot(mbi);
 
 	if (uefi == 0)
-	{
-		bmk_printf("mp_init_begin\n");
 		x86_mp_init();
-		bmk_printf("mp_init\n");
-	}
 
 	bmk_sched_init();
-	bmk_printf("sched_init\n");
 	x86_xen_init();
-	bmk_printf("xen_init\n");
 
 	intr_init();
-	bmk_printf("intr_init\n");
 
 	spl0();
-	bmk_printf("spl0\n");
 
 	bmk_sched_startmain(bmk_mainthread, multiboot_cmdline);
 }

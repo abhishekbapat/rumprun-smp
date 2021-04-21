@@ -34,37 +34,6 @@
 
 #include <bmk-pcpu/pcpu.h>
 
-#define MEMSTART 0x100000
-
-struct efi_memory_descriptor
-{
-    uint32_t type;
-    uintptr_t physical_addr;
-    uintptr_t virt_addr;
-    uint64_t num_pages;
-    uint64_t attribute;
-};
-
-const char* efi_memory_type[] = 
-{
-    "EfiReservedMemoryType",
-    "EfiLoaderCode",
-    "EfiLoaderData",
-    "EfiBootServicesCode",
-    "EfiBootServicesData",
-    "EfiRuntimeServicesCode",
-    "EfiRuntimeServicesData",
-    "EfiConventionalMemory",
-    "EfiUnusableMemory",
-    "EfiACPIReclaimMemory",
-    "EfiACPIMemoryNVS",
-    "EfiMemoryMappedIO",
-    "EfiMemoryMappedIOPortSpace",
-    "EfiPalCode",
-    "EfiPersistentMemory",
-    "EfiMaxMemoryType"
-};
-
 static uint32_t
 parsemem(struct multiboot_tag_mmap *tag)
 {
@@ -72,6 +41,8 @@ parsemem(struct multiboot_tag_mmap *tag)
     multiboot_memory_map_t *mmap;
     unsigned long osend;
     extern char _end[];
+    uint64_t max_len = 0;
+    multiboot_memory_map_t *mmap_considered;
 
     /*
      * Look for our memory.  We assume it's just in one chunk
@@ -81,23 +52,33 @@ parsemem(struct multiboot_tag_mmap *tag)
          (multiboot_uint8_t *)mmap < (multiboot_uint8_t *)tag + tag->size;
          mmap = (multiboot_memory_map_t *)((unsigned long)mmap + ((struct multiboot_tag_mmap *)tag)->entry_size))
     {
-        if (mmap->addr == MEMSTART && mmap->type == MULTIBOOT_MEMORY_AVAILABLE)
+        if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
             mmap_found++;
-            bmk_printf("multiboot2 memory chunk found at location: %p\n", (void *)mmap->addr);
-            break;
+            if (mmap->len > max_len)
+            {
+                mmap_considered = mmap;
+                max_len = (uint64_t)mmap->len;
+            }
         }
     }
 
     if (mmap_found == 0)
-        bmk_platform_halt("multiboot2 memory chunk not found");
+        bmk_platform_halt("multiboot2 memory chunk not found\n");
 
-    osend = bmk_round_page((unsigned long)_end);
-    bmk_assert(osend > mmap->addr && osend < mmap->addr + mmap->len);
-
-    bmk_pgalloc_loadmem(osend, mmap->addr + mmap->len);
-
-    bmk_memsize = mmap->addr + mmap->len - osend;
+    if (mmap_considered->addr < (uint64_t)_end)
+    {
+        osend = bmk_round_page((unsigned long)_end);
+        bmk_assert(osend > mmap_considered->addr && osend < mmap_considered->addr + mmap_considered->len);
+        bmk_pgalloc_loadmem(osend, mmap_considered->addr + mmap_considered->len);
+        bmk_memsize = mmap_considered->addr + mmap_considered->len - osend;
+    }
+    else
+    {
+        unsigned long addr = bmk_round_page((unsigned long)mmap_considered->addr);
+        bmk_pgalloc_loadmem(addr, mmap_considered->addr + mmap_considered->len);
+        bmk_memsize = mmap_considered->addr + mmap_considered->len - addr;
+    }
 
     return 0;
 }
@@ -172,24 +153,10 @@ int multiboot(unsigned long addr)
                 // bmk_platform_halt("test 4");
             }
             break;
-        case MULTIBOOT_TAG_TYPE_EFI_MMAP:
-        {
-            struct multiboot_tag_efi_mmap *mmap = (struct multiboot_tag_efi_mmap *)tag;
-            int mmap_entries = mmap->size/mmap->descr_size;
-            bmk_printf("Entries: %d\n", mmap_entries);
-            for(int i = 0; i < mmap_entries; i++)
-            {
-                struct efi_memory_descriptor *mdesc = (struct efi_memory_descriptor *)((uint64_t)mmap->efi_mmap + (mmap->descr_size * i));
-                int size = mdesc->num_pages * 4;
-                if(mdesc->type == 7)
-                    bmk_printf("%s : %d KBs at address: %p\n", efi_memory_type[mdesc->type], size, (void *)mdesc->physical_addr);
-            }
-            break;
-        }
         case MULTIBOOT_TAG_TYPE_BOOT_LOADER_NAME:
         {
             struct multiboot_tag_string *mts = (struct multiboot_tag_string *)tag;
-            bmk_printf("Bootloader name: %s", mts->string);
+            bmk_printf("Bootloader name: %s\n", mts->string);
             break;
         }
         case MULTIBOOT_TAG_TYPE_FRAMEBUFFER:
