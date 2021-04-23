@@ -43,11 +43,7 @@ parsemem(struct multiboot_tag_mmap *tag)
     extern char _end[];
     uint64_t max_len = 0;
     multiboot_memory_map_t *mmap_considered;
-
-    /*
-     * Look for our memory.  We assume it's just in one chunk
-     * starting at MEMSTART.
-     */
+    
     for (mmap = tag->entries;
          (multiboot_uint8_t *)mmap < (multiboot_uint8_t *)tag + tag->size;
          mmap = (multiboot_memory_map_t *)((unsigned long)mmap + ((struct multiboot_tag_mmap *)tag)->entry_size))
