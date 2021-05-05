@@ -70,7 +70,6 @@ parsemem(struct multiboot_tag_mmap *tag)
 
     bmk_memsize = mmap->addr + mmap->len - osend;
 
-    //bmk_platform_halt("test 5");
     return 0;
 }
 
@@ -80,15 +79,12 @@ void multiboot(unsigned long addr)
 {
     uint32_t module_count = 0;
     uint32_t cmdline_count = 0;
-    uint32_t memory_info_count = 0;
     uint32_t memory_parse_count = 0;
     struct multiboot_tag *tag;
     unsigned long cmdlinelen;
     char *cmdline = NULL,
          *mbm_name;
-    //unsigned total_size;
     bmk_core_init(BMK_THREAD_STACK_PAGE_ORDER);
-    //total_size = *(unsigned *)addr;
     for (tag = (struct multiboot_tag *)(addr + 8);
          tag->type != MULTIBOOT_TAG_TYPE_END;
          tag = (struct multiboot_tag *)((multiboot_uint8_t *)tag + ((tag->size + 7) & ~7)))
@@ -109,7 +105,6 @@ void multiboot(unsigned long addr)
 
                 bmk_printf("multiboot2: Using configuration from %s\n",
                            mbm_name ? mbm_name : "(unnamed module)");
-                //bmk_platform_halt("test 1");
                 bmk_memcpy(multiboot_cmdline, cmdline, cmdlinelen);
                 multiboot_cmdline[cmdlinelen] = 0;
             }
@@ -124,23 +119,14 @@ void multiboot(unsigned long addr)
                 if (cmdlinelen >= BMK_MULTIBOOT_CMDLINE_SIZE)
                     bmk_platform_halt("command line too long, "
                                       "increase BMK_MULTIBOOT_CMDLINE_SIZE");
-                //bmk_platform_halt("test 2");
                 bmk_strcpy(multiboot_cmdline, cmdline);
             }
             break;
         case MULTIBOOT_TAG_TYPE_MMAP:
             if (memory_parse_count == 0)
             {
-                //bmk_platform_halt("test 3");
                 if (parsemem((struct multiboot_tag_mmap *)tag) == 0)
                     memory_parse_count++;
-            }
-            break;
-        case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
-            if (memory_info_count == 0)
-            {
-                memory_info_count++;
-                //bmk_platform_halt("test 4");
             }
             break;
         default:
@@ -150,9 +136,6 @@ void multiboot(unsigned long addr)
 
     if (cmdline == NULL)
         multiboot_cmdline[0] = 0;
-
-    if (memory_info_count == 0 && memory_parse_count == 0)
-        bmk_platform_halt("multiboot memory info not available\n");
 
     if (memory_parse_count == 0)
         bmk_platform_halt("multiboot memory parse failed");
